@@ -44,7 +44,7 @@ The repo is deploy-ready with no configuration:
 
 ## Structure
 
-```
+```text
 ├── index.html                  home
 ├── about-us.html
 ├── skilled-worker-visa.html    student-visa.html     family-visa.html
@@ -79,11 +79,70 @@ muted grey body copy (`--muted`).
 
 ## Motion
 
-Scroll reveals are driven by a single `IntersectionObserver`. Add
+### Scroll reveals
+
+Driven by a single `IntersectionObserver`. Add
 `data-anim="up|down|left|right|zoom|pop|mask|reveal"` to any element to opt it
 in, and wrap a group in `data-anim-group="90"` to stagger its children by 90 ms
-each. Every animation is disabled automatically under
-`prefers-reduced-motion: reduce`.
+each.
+
+### Cinematic scroll stage
+
+The intro is a scroll-scrubbed stage: a tall invisible track holds a
+`position: sticky` full-screen stage, and the track's position becomes a
+`0 → 1` progress number that drives the image chapters, the overlay cues and
+the chapter rail. Scroll is the timeline.
+
+Cues are declarative — no JS edits needed to re-time the intro:
+
+```html
+<div class="cine__cue"
+     data-cue="0.34,0.42,0.62,0.70"   <!-- in-start, in-end, out-start, out-end -->
+     data-cue-y="46"                  <!-- px travelled on the way in/out -->
+     data-cue-scale="0.965">          <!-- scale at rest, eases to 1 while held -->
+```
+
+Omit the 3rd/4th numbers and the cue stays visible to the end of the track.
+Tune the overall pace with `.cine__track { height: 340vh }` — longer is slower
+and more luxurious; 300–400vh is the sweet spot.
+
+**Adding a hero video.** The stage is already wired for one. Drop an
+all-keyframe clip at `assets/video/intro-desktop.mp4` (16:9) and
+`assets/video/intro-mobile.mp4` (9:16), then un-comment the `<video>` element
+in the stage markup. The engine picks the right source for the viewport, sets
+`video.currentTime` from scroll progress, and eases the play-head toward its
+target each frame so scrubbing is buttery rather than jumpy. The still chapters
+step aside automatically. Encode with:
+
+```bash
+ffmpeg -y -i input.mp4 -an -g 1 -keyint_min 1 -sc_threshold 0 \
+  -c:v libx264 -crf 20 -preset slow -pix_fmt yuv420p -movflags +faststart \
+  assets/video/intro-desktop.mp4
+```
+
+A keyframe on every frame is what makes seeking instant; CRF 18–20 keeps it
+sharp without choking the decoder while scrubbing.
+
+### Pinned horizontal rail
+
+The Visa Categories section pins and its rail travels sideways as you scroll
+down. Below 900px it degrades to an ordinary swipe carousel (no pinning, no
+reserved track height).
+
+### Two rules worth keeping
+
+- **`overflow-x: clip`, never `hidden`, on `html`/`body`.** `hidden` turns the
+  root into a scroll container and silently stops `position: sticky` from
+  pinning, which would break both scroll stages.
+- **Readability is layered, not opacity.** A vertical veil, a strong
+  left-to-right scrim over the copy column, a vignette, and double text-shadows.
+  Anything transformed (the image chapters) paints in the positioned phase, so
+  the washes carry explicit `z-index` values or they render underneath the
+  imagery and do nothing.
+
+Every animation is disabled automatically under
+`prefers-reduced-motion: reduce` — the stages collapse to a single readable
+screen and the engine skips itself entirely.
 
 ## Known limitation — forms
 

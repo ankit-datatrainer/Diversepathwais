@@ -150,98 +150,198 @@
     items.forEach(function (el) { io.observe(el); });
   }
 
-  /* Split the hero headline into words so they can rise one after another. */
-  function initHeadlines() {
-    var titles = Array.prototype.slice.call(document.querySelectorAll('[data-split]'));
-    if (!titles.length) return;
+  /* ========================================================== cinematic ===
+     Scroll is the timeline. Each [data-cine] section owns a tall track and a
+     sticky stage; we turn the track's position into a 0 -> 1 progress number
+     and drive everything from it: the video play-head, the image chapters and
+     every overlay cue.
 
-    titles.forEach(function (title) {
-      if (title.dataset.splitDone) return;
-      var html = '';
-      // Preserve <em> highlights while splitting on whitespace.
-      Array.prototype.slice.call(title.childNodes).forEach(function (node) {
-        var isEm = node.nodeType === 1 && node.tagName === 'EM';
-        var text = node.textContent;
-        text.split(/(\s+)/).forEach(function (chunk) {
-          if (!chunk.trim()) { html += chunk; return; }
-          var inner = isEm ? '<em>' + chunk + '</em>' : chunk;
-          html += '<span class="word"><span>' + inner + '</span></span>';
+     Cues are declarative:
+       data-cue="a,b,c,d"  hidden < a, fades in a..b, holds b..c, out c..d
+                           (c and d optional -> stays visible to the end)
+       data-cue-y="60"     px travelled on the way in/out
+       data-cue-scale=".9" scale at rest, easing to 1 while held
+  --------------------------------------------------------------------- */
+  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+
+  function cueOpacity(p, w) {
+    var a = w[0], b = w[1], c = w[2], d = w[3];
+    if (p < a) return 0;
+    if (p < b) return clamp01((p - a) / (b - a || 1));
+    if (c == null) return 1;
+    if (p < c) return 1;
+    if (d == null) return 1;
+    return clamp01(1 - (p - c) / (d - c || 1));
+  }
+
+  function initCinematic() {
+    var sections = Array.prototype.slice.call(document.querySelectorAll('[data-cine]'));
+    if (!sections.length) return;
+
+    sections.forEach(function (section) {
+      var track = section.querySelector('.cine__track');
+      var video = section.querySelector('[data-cine-video]');
+      var layers = Array.prototype.slice.call(section.querySelectorAll('.cine__layer'));
+      var chapters = Array.prototype.slice.call(section.querySelectorAll('.cine__chapter'));
+      if (!track) return;
+
+      /* Reduced motion: show the first chapter, skip the whole engine. */
+      if (reduced) {
+        if (layers[0]) { layers[0].style.opacity = 1; layers[0].style.transform = 'none'; }
+        if (video) video.remove();
+        return;
+      }
+
+      var cues = Array.prototype.slice.call(section.querySelectorAll('[data-cue]')).map(function (el) {
+        return {
+          el: el,
+          win: el.getAttribute('data-cue').split(',').map(parseFloat),
+          y: parseFloat(el.getAttribute('data-cue-y') || 0),
+          scale: parseFloat(el.getAttribute('data-cue-scale') || 1)
+        };
+      });
+
+      /* Pick the right clip for the viewport, then remount so it reloads. */
+      if (video) {
+        var wide = video.getAttribute('data-src-desktop');
+        var tall = video.getAttribute('data-src-mobile');
+        var pick = (window.matchMedia('(max-width: 767px)').matches && tall) ? tall : wide;
+        if (pick) {
+          video.src = pick;
+          video.load();
+          section.classList.add('has-video');
+        } else {
+          video.remove();
+          video = null;
+        }
+      }
+
+      var progress = 0;
+      var targetTime = 0;
+
+      function render() {
+        var rect = track.getBoundingClientRect();
+        var scrollable = rect.height - window.innerHeight;
+        var scrolled = Math.min(Math.max(-rect.top, 0), Math.max(scrollable, 0));
+        progress = scrollable > 0 ? scrolled / scrollable : 0;
+
+        /* Image chapters crossfade, with the first fully opaque at p=0 and the
+           last fully opaque at p=1 (centres spread across the whole track), so
+           the stage never starts or ends on a half-faded frame. A single
+           continuous scale gives the slow scroll-driven push-in. */
+        if (layers.length) {
+          var last = layers.length - 1;
+          var reach = last > 0 ? 1 / last : 1;
+          var scale = (1.04 + progress * 0.12).toFixed(4);
+          layers.forEach(function (layer, i) {
+            var centre = last > 0 ? i / last : 0;
+            var o = last > 0 ? 1 - Math.min(Math.abs(progress - centre) / reach, 1) : 1;
+            layer.style.opacity = o.toFixed(3);
+            layer.style.transform = 'scale(' + scale + ')';
+          });
+        }
+
+        /* Overlay choreography. */
+        cues.forEach(function (cue) {
+          var o = cueOpacity(progress, cue.win);
+          var t = '';
+          if (cue.y) t += ' translate3d(0,' + ((1 - o) * cue.y).toFixed(1) + 'px,0)';
+          if (cue.scale !== 1) t += ' scale(' + (cue.scale + (1 - cue.scale) * o).toFixed(4) + ')';
+          cue.el.style.opacity = o.toFixed(3);
+          cue.el.style.transform = t || 'none';
+          cue.el.style.pointerEvents = o > 0.55 ? 'auto' : 'none';
+        });
+
+        /* Chapter rail fills as you move through each chapter. */
+        if (chapters.length) {
+          var cspan = 1 / chapters.length;
+          chapters.forEach(function (ch, i) {
+            var fill = clamp01((progress - i * cspan) / cspan);
+            ch.firstElementChild.style.transform = 'scaleX(' + fill.toFixed(3) + ')';
+          });
+        }
+
+        if (video && video.duration) {
+          targetTime = progress * (video.duration - 0.05);
+        }
+      }
+
+      /* The video play-head chases its target every frame, so scrubbing eases
+         instead of snapping. Only runs while a clip is actually present. */
+      var rafId = 0;
+      function chase() {
+        if (video && video.readyState >= 2) {
+          var diff = targetTime - video.currentTime;
+          if (Math.abs(diff) > 0.008) video.currentTime += diff * 0.28;
+        }
+        rafId = window.requestAnimationFrame(chase);
+      }
+
+      /* Clicking a chapter seeks the page to that point in the track. */
+      chapters.forEach(function (ch, i) {
+        ch.addEventListener('click', function () {
+          var rect = track.getBoundingClientRect();
+          var top = rect.top + window.scrollY;
+          var scrollable = rect.height - window.innerHeight;
+          var mid = (i + 0.5) / chapters.length;
+          window.scrollTo({ top: top + scrollable * mid, behavior: 'smooth' });
         });
       });
-      title.innerHTML = html;
-      title.dataset.splitDone = '1';
-      Array.prototype.slice.call(title.querySelectorAll('.word > span')).forEach(function (w, i) {
-        w.style.setProperty('--d', (i * 70) + 'ms');
-      });
+
+      window.addEventListener('scroll', render, { passive: true });
+      window.addEventListener('resize', render, { passive: true });
+      if (video) {
+        video.addEventListener('loadedmetadata', render);
+        rafId = window.requestAnimationFrame(chase);
+        document.addEventListener('visibilitychange', function () {
+          if (document.hidden) { window.cancelAnimationFrame(rafId); rafId = 0; }
+          else if (!rafId) { rafId = window.requestAnimationFrame(chase); }
+        });
+      }
+      render();
     });
   }
 
-  function playHeadline(scope) {
-    if (!scope) return;
-    var t = scope.querySelector('[data-split]');
-    if (!t) return;
-    t.classList.remove('is-typed');
-    // force reflow so the transition restarts on every slide change
-    void t.offsetWidth;
-    t.classList.add('is-typed');
-  }
+  /* ------------------------------------------- pinned horizontal rail --- */
+  function initPinnedRail() {
+    var section = document.querySelector('[data-hgal]');
+    if (!section) return;
 
-  /* ------------------------------------------------------- hero slider --- */
-  function initHero() {
-    var hero = document.querySelector('[data-hero]');
-    if (!hero) return;
+    var track = section.querySelector('.hgal__track');
+    var stage = section.querySelector('.hgal__stage');
+    var rail = section.querySelector('.hgal__rail');
+    var bar = section.querySelector('.hgal__bar i');
+    if (!track || !rail) return;
 
-    var slides = Array.prototype.slice.call(hero.querySelectorAll('.hero__slide'));
-    var dots = Array.prototype.slice.call(hero.querySelectorAll('.hero__dot'));
-    if (!slides.length) return;
+    var distance = 0;
 
-    var index = 0;
-    var timer = null;
-    var DELAY = 6000;
-
-    function show(next) {
-      index = (next + slides.length) % slides.length;
-      slides.forEach(function (s, i) {
-        s.classList.toggle('is-active', i === index);
-        s.setAttribute('aria-hidden', String(i !== index));
-      });
-      dots.forEach(function (d, i) {
-        d.classList.toggle('is-active', i === index);
-        d.setAttribute('aria-selected', String(i === index));
-      });
-      playHeadline(slides[index]);
+    function measure() {
+      /* Below the pin breakpoint the CSS turns the rail into a swipe
+         carousel, so the track must not reserve any extra height. */
+      if (mq.matches || reduced) {
+        track.style.height = '';
+        rail.style.transform = '';
+        return;
+      }
+      distance = Math.max(rail.scrollWidth - window.innerWidth + 48, 0);
+      track.style.height = (stage.offsetHeight + distance) + 'px';
     }
 
-    function start() { stop(); if (slides.length > 1 && !reduced) timer = setInterval(function () { show(index + 1); }, DELAY); }
-    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+    function render() {
+      if (mq.matches || reduced || !distance) return;
+      var rect = track.getBoundingClientRect();
+      var scrollable = rect.height - window.innerHeight;
+      var scrolled = Math.min(Math.max(-rect.top, 0), Math.max(scrollable, 0));
+      var p = scrollable > 0 ? scrolled / scrollable : 0;
+      rail.style.transform = 'translate3d(' + (-p * distance).toFixed(1) + 'px,0,0)';
+      if (bar) bar.style.transform = 'scaleX(' + p.toFixed(3) + ')';
+    }
 
-    dots.forEach(function (dot, i) {
-      dot.addEventListener('click', function () { show(i); start(); });
-    });
-
-    var prev = hero.querySelector('.hero__arrow--prev');
-    var next = hero.querySelector('.hero__arrow--next');
-    if (prev) prev.addEventListener('click', function () { show(index - 1); start(); });
-    if (next) next.addEventListener('click', function () { show(index + 1); start(); });
-
-    hero.addEventListener('mouseenter', stop);
-    hero.addEventListener('mouseleave', start);
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden) stop(); else start();
-    });
-
-    /* Swipe on touch devices. */
-    var x0 = null;
-    hero.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
-    hero.addEventListener('touchend', function (e) {
-      if (x0 === null) return;
-      var dx = e.changedTouches[0].clientX - x0;
-      if (Math.abs(dx) > 50) { show(index + (dx < 0 ? 1 : -1)); start(); }
-      x0 = null;
-    }, { passive: true });
-
-    show(0);
-    start();
+    window.addEventListener('scroll', render, { passive: true });
+    window.addEventListener('resize', function () { measure(); render(); }, { passive: true });
+    window.addEventListener('load', function () { measure(); render(); });
+    measure();
+    render();
   }
 
   /* --------------------------------------------- duplicate the marquee --- */
@@ -269,6 +369,17 @@
 
     var prev = document.querySelector('[data-media-prev]');
     var next = document.querySelector('[data-media-next]');
+    var nav = track.parentNode.querySelector('.media-nav');
+
+    /* On wide screens every card already fits, so the arrows would be inert —
+       hide them rather than offering controls that do nothing. */
+    function syncNav() {
+      if (!nav) return;
+      nav.hidden = track.scrollWidth <= track.clientWidth + 4;
+    }
+    window.addEventListener('resize', syncNav, { passive: true });
+    window.addEventListener('load', syncNav);
+    syncNav();
 
     if (prev) prev.addEventListener('click', function () {
       if (track.scrollLeft <= 4) track.scrollTo({ left: track.scrollWidth, behavior: 'smooth' });
@@ -393,10 +504,10 @@
   function init() {
     initHeader();
     initNav();
-    initHeadlines();
     initMarquee();
     initReveals();
-    initHero();
+    initCinematic();
+    initPinnedRail();
     initMediaSlider();
     initTestimonials();
     initScrollUI();
