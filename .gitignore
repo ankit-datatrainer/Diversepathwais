@@ -11,3 +11,7 @@ desktop.ini
 # Local scratch / test scaffolding
 _*.html
 *.log
+
+# Generated Sites deployment bundle
+dist/
+*.tgz

@@ -29,14 +29,14 @@
 
 :root {
   /* Brand */
-  --navy-900: #071a33;
-  --navy-800: #0b2545;
+  --navy-900: #06172b;
+  --navy-800: #092441;
   --navy-700: #0e2a53;
   --navy: #14396f;
   --navy-400: #2f5fa8;
   --navy-100: #e8eff9;
   --navy-50: #f4f8fd;
-  --gold: #f0a500;
+  --gold: #f5ad16;
   --gold-600: #d18f00;
   --gold-100: #fff4dd;
 
@@ -53,14 +53,14 @@
   /* Surfaces */
   --bg: #ffffff;
   --surface: #ffffff;
-  --surface-alt: #f5f7fb;
+  --surface-alt: #f3f0e9;
   --line: #e6eaf0;
   --line-soft: #eef1f6;
 
   /* Type scale */
-  --fs-display: clamp(2.5rem, 5.4vw, 4rem);
-  --fs-h1: clamp(2.125rem, 4vw, 3rem);
-  --fs-h2: clamp(1.875rem, 3.2vw, 2.75rem);
+  --fs-display: clamp(3.25rem, 7.4vw, 6.75rem);
+  --fs-h1: clamp(2.75rem, 5vw, 5.25rem);
+  --fs-h2: clamp(2.35rem, 4.6vw, 4.75rem);
   --fs-h3: 1.25rem;
   --fs-lead: 1.125rem;
   --fs-body: 0.9375rem;
@@ -68,9 +68,9 @@
   --fs-xs: 0.75rem;
 
   --shell: 1240px;
-  --radius: 16px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
+  --radius: 18px;
+  --radius-lg: 28px;
+  --radius-xl: 40px;
 
   --shadow-xs: 0 1px 2px rgba(11, 37, 69, .06);
   --shadow-sm: 0 2px 4px rgba(11, 37, 69, .05), 0 4px 12px rgba(11, 37, 69, .05);
