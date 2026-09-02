@@ -847,14 +847,12 @@
         a.setAttribute('aria-selected', String(k === i));
       });
     }
-    function start() { stop(); if (!reduced) timer = setInterval(function () { show(i + 1); }, 7000); }
+    function start() { stop(); timer = setInterval(function () { show(i + 1); }, 2000); }
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
 
     avatars.forEach(function (a, k) {
       a.addEventListener('click', function () { show(k); start(); });
     });
-    root.addEventListener('mouseenter', stop);
-    root.addEventListener('mouseleave', start);
 
     show(0);
     start();
