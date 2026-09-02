@@ -555,16 +555,240 @@
     render();
   }
 
-  /* --------------------------------------------- duplicate the marquee --- */
+  /* -------------------------------------- interactive marquee engine --- */
   function initMarquee() {
+    var container = document.querySelector('[data-marquee-container]') || document.querySelector('.marquee');
     var track = document.querySelector('[data-marquee]');
-    if (!track || track.dataset.cloned) return;
-    // The CSS animation translates by -50%, so the content must appear twice.
-    track.innerHTML += track.innerHTML;
-    Array.prototype.slice.call(track.children).forEach(function (el, i, all) {
-      if (i >= all.length / 2) el.setAttribute('aria-hidden', 'true');
+    if (!track || !container || track.dataset.initialized) return;
+    track.dataset.initialized = '1';
+
+    // Disable CSS animation so the JavaScript engine maintains smooth 60fps interactive control
+    track.style.animation = 'none';
+
+    // Clone items to ensure seamless infinite looping on any viewport size
+    var initialHTML = track.innerHTML;
+    track.innerHTML = initialHTML + initialHTML;
+    if (track.scrollWidth < (window.innerWidth || 1920) * 2.5) {
+      track.innerHTML += initialHTML;
+    }
+
+    var allItems = Array.prototype.slice.call(track.children);
+    var halfCount = Math.floor(allItems.length / 2);
+    allItems.forEach(function (el, i) {
+      if (i >= halfCount) el.setAttribute('aria-hidden', 'true');
     });
-    track.dataset.cloned = '1';
+
+    var halfWidth = track.scrollWidth / 2;
+    function updateDimensions() {
+      halfWidth = track.scrollWidth / 2;
+    }
+    window.addEventListener('resize', updateDimensions, { passive: true });
+
+    // Animation & control state
+    var pos = 0;
+    var baseSpeed = 0.95; // pixels per frame at 60fps (~57px/sec)
+    var speedMultiplier = 1.0;
+    var direction = -1; // -1 = Right to Left, 1 = Left to Right
+    var isPaused = false;
+    var isHovered = false;
+    var isDragging = false;
+    var dragStartX = 0;
+    var dragStartPos = 0;
+    var hasDragged = false;
+    var lastX = 0;
+    var lastTime = 0;
+    var velocity = 0;
+
+    // Main render loop
+    function animate() {
+      if (!isDragging) {
+        if (Math.abs(velocity) > 0.05) {
+          pos += velocity;
+          velocity *= 0.93; // Inertial decay after swipe
+        } else {
+          velocity = 0;
+          if (!isPaused && !isHovered) {
+            pos += baseSpeed * speedMultiplier * direction;
+          }
+        }
+
+        // Seamless wrap-around
+        if (halfWidth > 0) {
+          while (pos <= -halfWidth) {
+            pos += halfWidth;
+          }
+          while (pos > 0) {
+            pos -= halfWidth;
+          }
+        }
+
+        track.style.transform = 'translate3d(' + pos.toFixed(2) + 'px, 0, 0)';
+      }
+
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+
+    // --- UI Controls ---
+    var toggleBtn = document.querySelector('[data-marquee-toggle]');
+    var toggleText = toggleBtn ? toggleBtn.querySelector('.marquee-btn__text') : null;
+    var iconPause = toggleBtn ? toggleBtn.querySelector('.icon-pause') : null;
+    var iconPlay = toggleBtn ? toggleBtn.querySelector('.icon-play') : null;
+
+    function setPaused(paused) {
+      isPaused = paused;
+      if (!toggleBtn) return;
+      if (isPaused) {
+        toggleBtn.classList.remove('is-playing');
+        toggleBtn.classList.add('is-paused');
+        toggleBtn.setAttribute('title', 'Resume animation');
+        toggleBtn.setAttribute('aria-label', 'Resume marquee animation');
+        if (toggleText) toggleText.textContent = 'Play';
+        if (iconPause) iconPause.style.display = 'none';
+        if (iconPlay) iconPlay.style.display = 'inline-block';
+      } else {
+        toggleBtn.classList.remove('is-paused');
+        toggleBtn.classList.add('is-playing');
+        toggleBtn.setAttribute('title', 'Pause animation');
+        toggleBtn.setAttribute('aria-label', 'Pause marquee animation');
+        if (toggleText) toggleText.textContent = 'Pause';
+        if (iconPause) iconPause.style.display = 'inline-block';
+        if (iconPlay) iconPlay.style.display = 'none';
+      }
+    }
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        setPaused(!isPaused);
+      });
+    }
+
+    // Direction buttons
+    var dirBtns = document.querySelectorAll('[data-marquee-dir]');
+    Array.prototype.slice.call(dirBtns).forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var dir = parseInt(btn.getAttribute('data-marquee-dir'), 10) || -1;
+        direction = dir;
+        velocity = dir * 16; // Smooth step kick
+        if (isPaused) {
+          setPaused(false);
+        }
+      });
+    });
+
+    // Speed selector pills
+    var speedBtns = document.querySelectorAll('[data-marquee-speed]');
+    Array.prototype.slice.call(speedBtns).forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var spd = parseFloat(btn.getAttribute('data-marquee-speed')) || 1.0;
+        speedMultiplier = spd;
+        Array.prototype.slice.call(speedBtns).forEach(function (b) {
+          b.classList.remove('is-active');
+        });
+        btn.classList.add('is-active');
+      });
+    });
+
+    // Pause on hover
+    container.addEventListener('mouseenter', function () {
+      isHovered = true;
+    });
+    container.addEventListener('mouseleave', function () {
+      isHovered = false;
+      if (isDragging) {
+        isDragging = false;
+        container.classList.remove('is-dragging');
+      }
+    });
+
+    // Mouse & Touch drag handling
+    function onStart(clientX) {
+      isDragging = true;
+      hasDragged = false;
+      dragStartX = clientX;
+      dragStartPos = pos;
+      lastX = clientX;
+      lastTime = performance.now();
+      velocity = 0;
+      container.classList.add('is-dragging');
+    }
+
+    function onMove(clientX) {
+      if (!isDragging) return;
+      var delta = clientX - dragStartX;
+      if (Math.abs(delta) > 5) {
+        hasDragged = true;
+      }
+      pos = dragStartPos + delta;
+
+      var now = performance.now();
+      var dt = now - lastTime;
+      if (dt > 8) {
+        velocity = ((clientX - lastX) / dt) * 16;
+        lastX = clientX;
+        lastTime = now;
+      }
+
+      if (halfWidth > 0) {
+        while (pos <= -halfWidth) {
+          pos += halfWidth;
+          dragStartPos += halfWidth;
+        }
+        while (pos > 0) {
+          pos -= halfWidth;
+          dragStartPos -= halfWidth;
+        }
+      }
+
+      track.style.transform = 'translate3d(' + pos.toFixed(2) + 'px, 0, 0)';
+    }
+
+    function onEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      container.classList.remove('is-dragging');
+      if (velocity > 28) velocity = 28;
+      if (velocity < -28) velocity = -28;
+    }
+
+    // Pointer events on container
+    container.addEventListener('mousedown', function (e) {
+      if (e.target.closest('button, a')) return;
+      onStart(e.clientX);
+    });
+    window.addEventListener('mousemove', function (e) {
+      if (isDragging) onMove(e.clientX);
+    });
+    window.addEventListener('mouseup', function () {
+      if (isDragging) onEnd();
+    });
+
+    // Touch events for mobile/tablet
+    container.addEventListener('touchstart', function (e) {
+      if (e.target.closest('button, a')) return;
+      if (e.touches.length === 1) {
+        onStart(e.touches[0].clientX);
+      }
+    }, { passive: true });
+    window.addEventListener('touchmove', function (e) {
+      if (isDragging && e.touches.length === 1) {
+        onMove(e.touches[0].clientX);
+      }
+    }, { passive: true });
+    window.addEventListener('touchend', function () {
+      if (isDragging) onEnd();
+    });
+
+    // Prevent link click when dragged
+    track.addEventListener('click', function (e) {
+      if (hasDragged) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
   }
 
   /* ------------------------------------------------ group media slider --- */
@@ -711,11 +935,41 @@
     });
   }
 
+  /* --------------------------------------------- hero text rotator --- */
+  function initHeroRotator() {
+    var rotator = document.getElementById('hero-rotator');
+    if (!rotator) return;
+    var words = Array.prototype.slice.call(rotator.querySelectorAll('.rotator-word'));
+    if (words.length < 2) return;
+
+    var currentIndex = 0;
+    var interval = 2800;
+
+    setInterval(function () {
+      var currentWord = words[currentIndex];
+      var nextIndex = (currentIndex + 1) % words.length;
+      var nextWord = words[nextIndex];
+
+      currentWord.classList.remove('is-active');
+      currentWord.classList.add('is-exiting');
+
+      nextWord.classList.add('is-active');
+      nextWord.classList.remove('is-exiting');
+
+      setTimeout(function () {
+        currentWord.classList.remove('is-exiting');
+      }, 500);
+
+      currentIndex = nextIndex;
+    }, interval);
+  }
+
   /* -------------------------------------------------------------- init --- */
   function init() {
     initAwardExperience();
     initHeader();
     initNav();
+    initHeroRotator();
     initMarquee();
     initReveals();
     initCinematic();
