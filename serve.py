@@ -50,7 +50,8 @@ if __name__ == '__main__':
     server_started = False
     for port in [8080, 8088, 5050, 3030]:
         try:
-            httpd = socketserver.TCPServer(("", port), CustomHandler)
+            socketserver.ThreadingTCPServer.allow_reuse_address = True
+            httpd = socketserver.ThreadingTCPServer(("", port), CustomHandler)
             print(f"Serving visa website at http://localhost:{port}/", flush=True)
             server_started = True
             httpd.serve_forever()

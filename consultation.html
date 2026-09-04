@@ -23,8 +23,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/css/style.css"/>
 <link rel="stylesheet" href="assets/css/award-motion.css"/>
+<link rel="stylesheet" href="assets/css/flight.css"/>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" crossorigin/>
 </head>
 <body>
+<div class="flight-loader" id="flight-loader" aria-hidden="true">
+<span class="flight-loader__corner flight-loader__corner--tl">DEL &rarr; YYZ &middot; Boarding</span>
+<div class="flight-loader__inner">
+<svg class="flight-loader__sky" viewBox="0 0 680 230" aria-hidden="true">
+<path class="flight-loader__route" d="M28 186 C 150 60, 330 40, 470 96 S 640 170, 654 150"/>
+<path class="flight-loader__flown" d="M28 186 C 150 60, 330 40, 470 96 S 640 170, 654 150"/>
+<circle class="flight-loader__pin" cx="28" cy="186" r="4"/>
+<circle class="flight-loader__pin flight-loader__pin--end" cx="654" cy="150" r="5"/>
+<g class="flight-loader__jet-group" transform="translate(28 186)">
+<circle class="flight-loader__jet-glow" r="22"/>
+<path class="flight-loader__jet" transform="rotate(90) translate(-12 -12) scale(1.15)" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/>
+</g>
+</svg>
+<div class="flight-loader__brand"><span>Diverse <em>Pathwais</em></span></div>
+<div class="flight-loader__meta"><span class="flight-loader__count">00</span><span>Preparing your journey</span></div>
+<div class="flight-loader__bar"><i></i></div>
+</div>
+<span class="flight-loader__corner flight-loader__corner--br">Global mobility<br/>Est. 2025</span>
+</div>
+<noscript><style>.flight-loader{display:none}</style></noscript>
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header" data-header>
 <div class="topbar">
@@ -67,11 +90,14 @@
 <div class="scroll-progress" data-progress></div>
 </header>
 <main id="main">
-<section class="page-hero">
+<section class="page-hero" style="background-image: url('assets/img/banners/banner-consultation.jpg');">
 <div class="shell">
 <nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">Home</a><span>/</span>Consultation</nav>
-<h1 data-anim="up">Consultation</h1>
-<p data-anim="up" style="--d:110ms">Expert consultants provide valuable guidance and visa knowledge for a smooth immigration process.</p>
+<div class="page-hero__content">
+<span class="page-hero__eyebrow" data-anim="up">LEGAL ADVISORY</span>
+<h1 class="page-hero__title" data-anim="up">CONSULTATION</h1>
+<p class="page-hero__lead" data-anim="up" style="--d:110ms">Expert consultants provide valuable guidance and visa knowledge for a smooth immigration process.</p>
+</div>
 </div>
 </section><section class="section">
 <div class="shell">
@@ -133,6 +159,7 @@
 </a>
 </div>
 <button class="to-top" data-to-top type="button" aria-label="Back to top"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m0 0-7 7m7-7 7 7"/></svg></button>
+<script type="module" src="assets/js/flight.js"></script>
 <script src="assets/js/main.js" defer></script>
 </body>
 </html>

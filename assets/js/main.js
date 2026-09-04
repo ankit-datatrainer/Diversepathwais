@@ -13,22 +13,7 @@
     var body = document.body;
     if (!body) return;
 
-    /* A short branded curtain makes moving between the static pages feel like
-       one continuous experience. It never blocks reduced-motion visitors. */
-    var loader = document.createElement('div');
-    loader.className = 'page-loader';
-    loader.setAttribute('aria-hidden', 'true');
-    loader.innerHTML = '<div class="page-loader__inner"><strong class="page-loader__mark"><span>Diverse Pathwais</span></strong><b class="page-loader__line"><i></i></b></div>';
-    body.appendChild(loader);
-
-    function revealPage() {
-      window.requestAnimationFrame(function () {
-        window.requestAnimationFrame(function () { body.classList.add('is-ready'); });
-      });
-    }
-    if (document.readyState === 'complete') revealPage();
-    else window.addEventListener('load', revealPage, { once: true });
-    window.setTimeout(revealPage, 900);
+    initFlightLoader();
 
     /* Add the small editorial details consistently across all twenty pages. */
     Array.prototype.slice.call(document.querySelectorAll('.nav > ul > .nav__item')).forEach(function (item, i) {
@@ -68,15 +53,111 @@
       if (url.origin !== window.location.origin || url.protocol === 'mailto:' || url.protocol === 'tel:') return;
       if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
       e.preventDefault();
-      body.classList.remove('is-ready');
-      body.classList.add('is-leaving');
-      window.setTimeout(function () { window.location.href = url.href; }, 520);
+      var curtain = document.getElementById('flight-loader');
+      if (curtain) {
+        curtain.classList.remove('is-done');
+        curtain.classList.add('is-leaving');
+        window.setTimeout(function () { window.location.href = url.href; }, 560);
+      } else {
+        window.location.href = url.href;
+      }
     });
 
     initPointerExperience();
     initMagneticButtons();
     initTiltCards();
     initHeroParallax();
+  }
+
+  /* ----------------------------------------------- take-off preloader ---
+     The curtain is static HTML so it paints before any script runs. The jet
+     flies a dashed route while a counter climbs; we hold until the window
+     has loaded and the 3D scene reports ready (or a safety timeout), then
+     lift the curtain and hand the jet over to the 3D scene. */
+  function initFlightLoader() {
+    var root = document.documentElement;
+    var loader = document.getElementById('flight-loader');
+    var hero = document.querySelector('.video-hero');
+
+    /* Split the hero title lines so they can rise out of a clip. */
+    if (hero) {
+      Array.prototype.slice.call(hero.querySelectorAll('.video-hero__title-line')).forEach(function (line) {
+        if (line.querySelector('span')) return;
+        var inner = document.createElement('span');
+        inner.textContent = line.textContent;
+        line.textContent = '';
+        line.appendChild(inner);
+      });
+    }
+
+    function reveal() {
+      root.classList.remove('is-loading');
+      root.classList.add('is-revealed');
+      document.dispatchEvent(new CustomEvent('flight:reveal'));
+    }
+
+    if (!loader || reduced) {
+      if (loader) loader.classList.add('is-idle');
+      reveal();
+      return;
+    }
+
+    root.classList.add('is-loading');
+    var quick = false;
+    try { quick = sessionStorage.getItem('dp-flown') === '1'; sessionStorage.setItem('dp-flown', '1'); } catch (ignore) {}
+
+    var route = loader.querySelector('.flight-loader__route');
+    var flown = loader.querySelector('.flight-loader__flown');
+    var jet = loader.querySelector('.flight-loader__jet-group');
+    var count = loader.querySelector('.flight-loader__count');
+    var bar = loader.querySelector('.flight-loader__bar');
+    var length = route && route.getTotalLength ? route.getTotalLength() : 0;
+    if (flown && length) {
+      flown.setAttribute('stroke-dasharray', String(length));
+      flown.setAttribute('stroke-dashoffset', String(length));
+    }
+
+    var start = performance.now();
+    var minTime = quick ? 900 : 2100;
+    var loaded = document.readyState === 'complete';
+    var sceneReady = Boolean(window.__flightReady);
+    var done = false;
+    window.addEventListener('load', function () { loaded = true; }, { once: true });
+    document.addEventListener('flight:ready', function () { sceneReady = true; }, { once: true });
+    var deadline = start + (quick ? 2500 : 4500);
+
+    function ease(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+
+    function tick(now) {
+      var elapsed = now - start;
+      var ready = loaded && (sceneReady || now > deadline);
+      /* the counter climbs to ~92 on its own and only completes once ready */
+      var raw = Math.min(elapsed / minTime, 1);
+      var p = ease(raw) * (ready ? 1 : .92);
+      if (ready && raw >= 1) p = 1;
+      if (count) count.textContent = String(Math.round(p * 100)).padStart(2, '0');
+      if (bar) bar.style.setProperty('--p', p.toFixed(3));
+      if (route && length && jet) {
+        var pt = route.getPointAtLength(p * length);
+        var ahead = route.getPointAtLength(Math.min(p * length + 1, length));
+        var behind = route.getPointAtLength(Math.max(p * length - 1, 0));
+        var angle = Math.atan2(ahead.y - behind.y, ahead.x - behind.x) * 180 / Math.PI;
+        jet.setAttribute('transform', 'translate(' + pt.x.toFixed(2) + ' ' + pt.y.toFixed(2) + ') rotate(' + angle.toFixed(2) + ')');
+        if (flown) flown.setAttribute('stroke-dashoffset', String(length * (1 - p)));
+      }
+      if (p >= 1 && !done) {
+        done = true;
+        loader.classList.add('is-done');
+        window.setTimeout(reveal, 140);
+        window.setTimeout(function () {
+          loader.classList.remove('is-done');
+          loader.classList.add('is-idle');
+        }, 1400);
+        return;
+      }
+      window.requestAnimationFrame(tick);
+    }
+    window.requestAnimationFrame(tick);
   }
 
   function initKineticType() {

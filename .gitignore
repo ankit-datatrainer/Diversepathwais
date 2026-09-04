@@ -15,3 +15,6 @@ _*.html
 # Generated Sites deployment bundle
 dist/
 *.tgz
+
+# Tooling
+.claude/

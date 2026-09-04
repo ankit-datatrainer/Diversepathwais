@@ -60,6 +60,8 @@ The repo is deploy-ready with no configuration:
 └── assets/
     ├── css/style.css
     ├── js/main.js
+    ├── js/flight.js        # scroll-driven 3D airliner + hero fleet (three.js via import map)
+    ├── css/flight.css      # take-off preloader, fixed flight canvas, hero choreography
     ├── fonts/         Inter variable woff2 (latin, latin-ext)
     └── img/           logos, flags, visa and article imagery
 ```
