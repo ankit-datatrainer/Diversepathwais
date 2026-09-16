@@ -1,0 +1,584 @@
+/* ==========================================================================
+   Responsive layer — loaded LAST so it wins the cascade.
+
+   style.css is desktop-first and award-motion.css re-declares some of the
+   same selectors *unconditionally*, which silently defeated several of
+   style.css's own media queries (notably `.layout`). Rather than reorder two
+   large files, every responsive correction lives here, after both.
+
+   Breakpoint ladder used throughout:
+     1180  small laptop
+     1024  landscape tablet
+      900  nav collapses to a drawer
+      768  portrait tablet
+      600  large phone
+      420  small phone
+   ========================================================================== */
+
+/* --------------------------------------------------------------- global --- */
+
+/* Nothing may be wider than the screen. `overflow-x: clip` on html/body was
+   hiding real overflow instead of preventing it. */
+*, *::before, *::after { min-width: 0; }
+img, svg, video, canvas, iframe { max-width: 100%; }
+
+/* Long unbreakable strings (emails, URLs) must not push the layout open. */
+.footer-contact a,
+.footer-contact li,
+.email-card a,
+.contact-card a,
+.prose a,
+.topbar a { overflow-wrap: anywhere; }
+
+/* `100vw` includes the classic scrollbar, so it is always a few px wider than
+   the viewport. Replace every layout-affecting use. */
+.hgal__rail { padding-left: max(1.15rem, calc((100% - var(--shell)) / 2 + 1.5rem)); }
+.section[data-section-index]::after { right: max(1rem, calc((100% - var(--shell)) / 2)); }
+
+/* Decorative uppercase micro-labels were below the legibility floor. */
+.flight-cue { font-size: .7rem; }
+.flight-loader__corner { font-size: .72rem; }
+
+/* Tap targets: anything interactive gets a comfortable hit area on touch. */
+@media (hover: none), (pointer: coarse) {
+  .nav__link,
+  .nav__sub a,
+  .footer-grid ul a,
+  .footer-bottom ul a,
+  .topbar__social a,
+  .social a,
+  .marquee__link,
+  .link-more { min-height: 44px; display: inline-flex; align-items: center; }
+  .btn { min-height: 48px; }
+  /* hover-only flourishes never fire on touch and just cost paint */
+  .hgal__card::before, .media-card::before, .bento__card::before { display: none; }
+}
+
+/* ------------------------------------------------------- laptop / tablet --- */
+@media (max-width: 1180px) {
+  .shell { padding-inline: 1.5rem; }
+}
+
+@media (max-width: 1024px) {
+  /* The mega dropdown is a fixed 480px centred on its trigger, so on a narrow
+     tablet its right edge ran past the viewport. */
+  .nav__sub { width: min(480px, calc(100vw - 2.5rem)); max-width: calc(100vw - 2.5rem); }
+  .nav__sub--single { width: min(300px, calc(100vw - 2.5rem)); }
+
+  /* Long-form pages: sidebar drops under the article. award-motion.css
+     re-declared `.layout` with no media query, which beat style.css's own
+     960px collapse — so on every visa/legal page the prose column was being
+     squeezed to almost nothing. This is the real fix. */
+  .layout { grid-template-columns: minmax(0, 1fr); gap: clamp(2.5rem, 5vw, 3.5rem); }
+  .sidebar { position: static; top: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
+  .prose { max-width: none; }
+}
+
+/* Hide mobile drawer header and footer on desktop */
+.nav__drawer-header,
+.nav__drawer-footer {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------- nav drawer --- */
+@media (max-width: 900px) {
+  /* `backdrop-filter` on .headerbar made it the containing block for every
+     fixed-position descendant, so the drawer was being laid out *inside* the
+     header — a 48px sliver. Dropping the filter restores viewport-fixed
+     positioning (and is cheaper to composite on a phone). */
+  .headerbar,
+  .site-header:not(.is-stuck) .headerbar,
+  .site-header.is-stuck .headerbar {
+    -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+    background: #fff;
+  }
+  .site-header.is-stuck .headerbar { box-shadow: 0 4px 20px rgba(11, 37, 69, .12); }
+
+  /* Sticky on phone and tablet, always above the drawer scrim and the canvas. */
+  .site-header { position: sticky; top: 0; z-index: 200; }
+  body.nav-open .site-header { z-index: 300; }
+
+  /* Luxury full-height mobile navigation drawer */
+  .nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: auto;
+    z-index: 310;
+    width: min(360px, 88vw);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #ffffff;
+    border-left: 1px solid rgba(11, 37, 69, .08);
+    -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+    box-shadow: -20px 0 60px rgba(6, 23, 43, .22);
+    transform: translate3d(100%, 0, 0);
+    visibility: hidden;
+    transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1), visibility .35s;
+    will-change: transform;
+  }
+  .nav.is-open { transform: translate3d(0, 0, 0); visibility: visible; }
+  .site-header.is-stuck .nav { top: 0; }
+
+  /* Drawer Header with brand logo and close button */
+  .nav__drawer-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.15rem 1.25rem;
+    border-bottom: 1px solid var(--line-soft);
+    background: #ffffff;
+    flex-shrink: 0;
+  }
+  .nav__drawer-brand img {
+    height: 38px;
+    width: auto;
+    display: block;
+    object-fit: contain;
+  }
+  .nav__drawer-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--navy-50);
+    color: var(--navy);
+    border: 1px solid var(--line-soft);
+    cursor: pointer;
+    transition: all .2s var(--ease);
+  }
+  .nav__drawer-close:active {
+    background: var(--navy);
+    color: #fff;
+    transform: scale(0.95);
+  }
+
+  /* Scrollable nav item list */
+  .nav > ul {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.85rem 1rem;
+    margin: 0;
+    list-style: none;
+    gap: 0.2rem;
+  }
+
+  .nav__item { opacity: 1; transform: none; transition: none; list-style: none; }
+  .nav.is-open .nav__item {
+    animation: navItemIn .3s var(--ease) both;
+    animation-delay: calc(var(--nav-i, 0) * 30ms + 30ms);
+  }
+  @keyframes navItemIn {
+    from { opacity: 0; transform: translateX(18px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .nav__link {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .85rem 1rem;
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--heading);
+    border-radius: 12px;
+    background: transparent;
+    transition: all .2s var(--ease);
+  }
+  .nav__link:hover,
+  .nav__link:active {
+    background: var(--navy-50);
+    color: var(--navy);
+  }
+  .nav__link.is-active {
+    background: rgba(11, 37, 69, 0.06);
+    color: var(--navy);
+    font-weight: 700;
+  }
+  .nav__link::after { display: none; }
+  .nav__item + .nav__item { border-top: 1px solid rgba(11, 37, 69, 0.04); }
+  .nav__caret {
+    width: 14px;
+    height: 14px;
+    color: var(--muted);
+    transition: transform .3s var(--ease);
+  }
+  .nav__item.is-open > .nav__link .nav__caret {
+    transform: rotate(180deg);
+    color: var(--navy);
+  }
+
+  /* Submenu with clean accordion styling */
+  .nav__sub {
+    position: static;
+    width: 100%;
+    max-width: none;
+    display: none;
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+    margin: 0.35rem 0 0.5rem;
+    padding: 0.5rem;
+    background: #f6f9fe;
+    border: 1px solid rgba(11, 37, 69, 0.06);
+    border-radius: 14px;
+    box-shadow: inset 0 2px 6px rgba(11, 37, 69, 0.02);
+    opacity: 0;
+    transform: none;
+    visibility: hidden;
+  }
+  .nav__sub::before { display: none; }
+  .nav__item.is-open > .nav__sub {
+    display: grid;
+    position: static;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    animation: subFade .25s var(--ease) both;
+  }
+  @keyframes subFade {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .nav__sub a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    color: var(--heading);
+    font-size: 0.92rem;
+    font-weight: 600;
+    transition: all .2s var(--ease);
+    text-decoration: none;
+  }
+  .nav__sub a:hover,
+  .nav__sub a:active {
+    background: #ffffff;
+    color: var(--navy);
+    box-shadow: 0 2px 8px rgba(11, 37, 69, 0.08);
+  }
+  .nav__sub .ic {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--navy);
+    border: 1px solid rgba(11, 37, 69, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .nav__sub a:hover .ic {
+    background: var(--gold);
+    color: var(--navy-900);
+    border-color: transparent;
+  }
+  .nav__sub strong {
+    font-size: 0.92rem;
+    font-weight: 600;
+    display: block;
+    color: inherit;
+  }
+  .nav__sub small {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* Drawer action footer */
+  .nav__mobile-cta { display: none !important; }
+  .nav__drawer-footer {
+    display: block !important;
+    flex-shrink: 0;
+    padding: 1.1rem 1.25rem calc(1.1rem + env(safe-area-inset-bottom));
+    background: #ffffff;
+    border-top: 1px solid rgba(11, 37, 69, 0.08);
+    box-shadow: 0 -4px 20px rgba(11, 37, 69, 0.03);
+  }
+  .nav__drawer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .nav__drawer-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.82rem 1.25rem;
+    font-size: 0.96rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0b2545 0%, #133966 100%);
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(11, 37, 69, 0.28);
+    text-decoration: none;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s;
+  }
+  .nav__drawer-cta:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(11, 37, 69, 0.2);
+  }
+  .nav__drawer-quick-contact {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+  }
+  .nav__quick-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    padding: 0.68rem 0.75rem;
+    min-height: 48px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    box-sizing: border-box;
+  }
+  .nav__quick-btn:active {
+    transform: scale(0.97);
+  }
+  .nav__quick-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: transform 0.2s var(--ease);
+  }
+  .nav__quick-btn:active .nav__quick-badge {
+    transform: scale(0.9);
+  }
+  .nav__quick-text {
+    display: flex;
+    align-items: center;
+  }
+  .nav__quick-label {
+    letter-spacing: -0.01em;
+  }
+
+  /* Call Button - Refined Luxury Card */
+  .nav__quick-btn--call {
+    background: linear-gradient(180deg, #ffffff 0%, #f7f9fd 100%);
+    color: #0b2545;
+    border: 1.5px solid #dbe4ef;
+    box-shadow: 0 2px 8px rgba(11, 37, 69, 0.05);
+  }
+  .nav__quick-btn--call .nav__quick-badge {
+    background: #eef4fb;
+    color: #0b2545;
+  }
+  .nav__quick-btn--call:hover,
+  .nav__quick-btn--call:active {
+    background: #ffffff;
+    border-color: #0b2545;
+    box-shadow: 0 4px 12px rgba(11, 37, 69, 0.1);
+  }
+
+  /* WhatsApp Button - Authentic Vibrant WhatsApp Gradient */
+  .nav__quick-btn--wa {
+    background: linear-gradient(135deg, #25D366 0%, #1ea952 100%);
+    color: #ffffff;
+    border: 1.5px solid #20ba59;
+    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.32);
+  }
+  .nav__quick-btn--wa .nav__quick-badge {
+    background: rgba(255, 255, 255, 0.24);
+    color: #ffffff;
+  }
+  .nav__quick-btn--wa:hover,
+  .nav__quick-btn--wa:active {
+    background: linear-gradient(135deg, #28e06c 0%, #189848 100%);
+    box-shadow: 0 6px 18px rgba(37, 211, 102, 0.42);
+  }
+
+  /* Helpline micro-note below quick contact */
+  .nav__drawer-helpline {
+    text-align: center;
+    font-size: 0.76rem;
+    font-weight: 500;
+    color: #64748b;
+    margin-top: 0.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+  .nav__drawer-helpline a {
+    color: #0b2545;
+    font-weight: 700;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    transition: color 0.2s;
+  }
+  .nav__drawer-helpline a:hover {
+    color: var(--gold-dark, #b8860b);
+    text-decoration: underline;
+  }
+
+  /* Scrim behind the drawer */
+  .nav-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 290;
+    background: rgba(6, 23, 43, .55);
+    -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .35s var(--ease), visibility .35s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.nav-open .nav-scrim { opacity: 1; visibility: visible; }
+
+  /* The 3D canvas must never sit over the open drawer */
+  .flight-canvas { z-index: 2; }
+  body.nav-open .flight-canvas { visibility: hidden; }
+
+  .nav-toggle {
+    display: flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    background: var(--navy);
+    border: 0;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(11, 37, 69, 0.18);
+    transition: transform .2s var(--ease), background .2s;
+  }
+  .nav-toggle:active { transform: scale(0.92); }
+  .header__actions .btn { display: none; }
+  .wa-float__label { display: none; }
+}
+
+/* ------------------------------------------------------ portrait tablet --- */
+@media (max-width: 768px) {
+  :root { --shell: 100%; }
+  .section { padding: clamp(3.5rem, 8vw, 5rem) 0; }
+  .section--tight { padding: 2.75rem 0; }
+  .section-head { margin-bottom: 2.25rem; }
+
+  /* A forced break plus an oversized heading was pushing the second half of
+     the line off the right edge. Scale the heading down rather than removing
+     the break — hiding a <br> fuses the words either side of it. */
+  .about-title { font-size: clamp(1.75rem, 6.4vw, 2.4rem); }
+
+  /* Heroes: `100vh` jumps as the mobile URL bar collapses, and the 640px
+     floor swallowed most of a phone screen. */
+  .page-hero {
+    min-height: auto;
+    padding: clamp(5.5rem, 14vw, 8rem) 0 clamp(2.5rem, 7vw, 4rem);
+  }
+  .video-hero { min-height: auto; padding: 4.5rem 0 3.5rem; }
+
+  .media-track { grid-auto-columns: minmax(260px, 78vw); }
+  .split, .about-section .split { grid-template-columns: 1fr; gap: 2.5rem; }
+  .collage { max-width: 100%; margin-inline: auto; }
+  .feature-grid { grid-template-columns: 1fr 1fr; }
+  .contact-grid, .email-grid, .quote-grid { grid-template-columns: 1fr; }
+  .process__row { grid-template-columns: 52px 1fr; padding-inline: .25rem; }
+  .process__row:hover { padding-inline: .25rem; }
+}
+
+/* ----------------------------------------------------------- big phone --- */
+@media (max-width: 600px) {
+  .shell { padding-inline: 1.15rem; }
+  .section { padding: 3.25rem 0; }
+
+  /* Two nowrap phone numbers in one topbar row were the widest thing on the
+     page. Show one, let the row breathe. */
+  .topbar__list li { white-space: normal; }
+  .topbar__list li .tel-alt { display: none; }
+  .topbar__social { gap: .25rem; }
+  .topbar__social a { width: 24px; height: 24px; }
+
+  /* Side-by-side form fields left ~150px per input. */
+  .form-grid { grid-template-columns: 1fr; gap: .85rem; }
+  .form-card { padding: 1.5rem 1.15rem; }
+  /* 10.4px uppercase labels are not readable at arm's length. */
+  .field label { font-size: .75rem; letter-spacing: .05em; }
+  .field input, .field select, .field textarea { font-size: 1rem; } /* >=16px stops iOS zooming on focus */
+
+  .feature-grid { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr; gap: 2rem; }
+  .footer-bottom { flex-direction: column; align-items: flex-start; }
+  .footer-bottom ul { gap: .35rem 1rem; }
+
+  .story-panel { padding: 1.75rem 1.25rem; }
+  .story-panel__top { flex-direction: column; align-items: flex-start; gap: .6rem; }
+  .story-panel__badges { flex-wrap: wrap; gap: .4rem; }
+
+  .hgal__card { width: min(84vw, 330px); }
+  .media-track { grid-auto-columns: 84vw; }
+
+  /* Floating decor is noise at this size and a common overflow source. */
+  .float-shape, .blob { display: none; }
+  .float-badge { font-size: .68rem; padding: .35rem .7rem; }
+
+  .wa-float { right: 12px; bottom: 12px; }
+  .wa-float__btn { width: 54px; height: 54px; }
+  .to-top { right: 14px; bottom: 76px; width: 44px; height: 44px; }
+}
+
+/* --------------------------------------------------------- small phone --- */
+@media (max-width: 420px) {
+  .video-hero__actions { flex-direction: column; align-items: stretch; }
+  .video-hero__actions .btn { width: 100%; justify-content: center; }
+  .btn--lg { padding: .9rem 1.4rem; font-size: .9rem; }
+  .nav { width: 100%; }
+  .tstack__avatars { gap: .4rem; }
+  .marquee__item { min-width: 78vw; }
+}
+
+/* ------------------------------------------------------------ landscape --- */
+/* A short landscape phone should not be forced into a tall hero. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .video-hero, .page-hero { min-height: auto; padding-block: 3.5rem 2.5rem; }
+  .nav { padding-bottom: 3rem; }
+}
+
+/* ------------------------------------------------------------- safe area --- */
+@supports (padding: max(0px)) {
+  .shell { padding-left: max(1.15rem, env(safe-area-inset-left)); padding-right: max(1.15rem, env(safe-area-inset-right)); }
+}
+
+@media (min-width: 769px) {
+  @supports (padding: max(0px)) {
+    .shell { padding-left: max(1.5rem, env(safe-area-inset-left)); padding-right: max(1.5rem, env(safe-area-inset-right)); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav.is-open .nav__item { animation: none; }
+}

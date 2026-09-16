@@ -51,16 +51,33 @@
       var url;
       try { url = new URL(link.href, window.location.href); } catch (ignore) { return; }
       if (url.origin !== window.location.origin || url.protocol === 'mailto:' || url.protocol === 'tel:') return;
-      if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
-      e.preventDefault();
-      var curtain = document.getElementById('flight-loader');
-      if (curtain) {
-        curtain.classList.remove('is-done');
-        curtain.classList.add('is-leaving');
-        window.setTimeout(function () { window.location.href = url.href; }, 560);
-      } else {
-        window.location.href = url.href;
+      var normTarget = (url.pathname || '').replace(/\/index\.html$/, '/').replace(/\/$/, '');
+      var normCurrent = (window.location.pathname || '').replace(/\/index\.html$/, '/').replace(/\/$/, '');
+      if (normTarget === normCurrent && url.search === window.location.search) {
+        if (!url.hash) {
+          var navEl = document.getElementById('primary-nav');
+          var toggleBtn = document.querySelector('.nav-toggle');
+          if (navEl && navEl.classList.contains('is-open')) {
+            e.preventDefault();
+            navEl.classList.remove('is-open');
+            if (toggleBtn) toggleBtn.classList.remove('is-open');
+            document.documentElement.classList.remove('nav-locked');
+            document.body.classList.remove('nav-locked', 'nav-open');
+            return;
+          }
+        }
+        return;
       }
+      /* On phones and tablets the exit curtain just reads as lag before every
+         tap, so navigate immediately there and keep the flourish for pointer
+         devices. */
+      if (mq.matches || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+      var curtain = document.getElementById('flight-loader');
+      if (!curtain) return;
+      e.preventDefault();
+      curtain.classList.remove('is-done');
+      curtain.classList.add('is-leaving');
+      window.setTimeout(function () { window.location.href = url.href; }, 420);
     });
 
     initPointerExperience();
@@ -102,9 +119,19 @@
       return;
     }
 
-    root.classList.add('is-loading');
     var quick = false;
     try { quick = sessionStorage.getItem('dp-flown') === '1'; sessionStorage.setItem('dp-flown', '1'); } catch (ignore) {}
+
+    if (quick) {
+      if (loader) {
+        loader.classList.remove('is-done', 'is-leaving');
+        loader.classList.add('is-idle');
+      }
+      reveal();
+      return;
+    }
+
+    root.classList.add('is-loading');
 
     var route = loader.querySelector('.flight-loader__route');
     var flown = loader.querySelector('.flight-loader__flown');
@@ -312,11 +339,24 @@
     function measure() {
       var doc = document.documentElement;
       maxScroll = doc.scrollHeight - doc.clientHeight;
+      /* The off-canvas drawer is pinned directly below the header, whose
+         height changes when the topbar collapses and when its text wraps on a
+         narrow screen. Publish the measured height so CSS never guesses. */
+      if (header) {
+        var h = Math.round(header.getBoundingClientRect().height);
+        if (h > 0) doc.style.setProperty('--header-h-real', h + 'px');
+      }
     }
 
     function update() {
       var y = window.scrollY || document.documentElement.scrollTop || 0;
-      if (header) header.classList.toggle('is-stuck', y > 60);
+      if (header) {
+        var wasStuck = header.classList.contains('is-stuck');
+        var stuck = y > 60;
+        header.classList.toggle('is-stuck', stuck);
+        /* the bar shrinks as it sticks, so re-publish its height afterwards */
+        if (stuck !== wasStuck) window.setTimeout(measure, 380);
+      }
       if (bar) {
         var ratio = maxScroll > 0 ? Math.min(Math.max(y / maxScroll, 0), 1) : 0;
         bar.style.transform = 'scaleX(' + ratio + ')';
@@ -334,39 +374,164 @@
     update();
   }
 
-  /* ------------------------------------------------------ mobile menu --- */
+  /* ------------------------------------------------------ mobile menu ---
+     The drawer is a viewport-fixed panel. It locks the page behind it, dims
+     the content with a scrim, and closes on: the toggle, the scrim, Escape,
+     any link inside it, and on crossing back above the breakpoint. */
   function initNav() {
     var toggle = document.querySelector('.nav-toggle');
     var nav = document.getElementById('primary-nav');
     if (!toggle || !nav) return;
 
+    var body = document.body;
+    var scrim = document.querySelector('.nav-scrim');
+    if (!scrim) {
+      scrim = document.createElement('div');
+      scrim.className = 'nav-scrim';
+      scrim.setAttribute('aria-hidden', 'true');
+      body.appendChild(scrim);
+    }
+
+    var lockedY = 0;
+    var isLocked = false;
+
+    /* Class-based scroll lock that prevents page jumps, shifts, and reload glitches */
+    function lockScroll() {
+      if (isLocked) return;
+      document.documentElement.classList.add('nav-locked');
+      document.body.classList.add('nav-locked');
+      isLocked = true;
+    }
+    function unlockScroll() {
+      if (!isLocked) return;
+      document.documentElement.classList.remove('nav-locked');
+      document.body.classList.remove('nav-locked');
+      isLocked = false;
+    }
+
+    /* Build drawer header with close button if not already in DOM */
+    var drawerHeader = nav.querySelector('.nav__drawer-header');
+    if (!drawerHeader) {
+      drawerHeader = document.createElement('div');
+      drawerHeader.className = 'nav__drawer-header';
+      drawerHeader.innerHTML = '<div class="nav__drawer-brand"><img src="assets/img/DIVERSE-PATHWAIS-main-Logo-1024x534.webp" alt="Diverse Pathwais logo" width="130" height="68"/></div><button class="nav__drawer-close" type="button" aria-label="Close navigation"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+      nav.insertBefore(drawerHeader, nav.firstChild);
+      var closeBtn = drawerHeader.querySelector('.nav__drawer-close');
+      if (closeBtn) closeBtn.addEventListener('click', closeNav);
+    }
+
+    /* Build drawer quick-action footer if not already in DOM */
+    var drawerFooter = nav.querySelector('.nav__drawer-footer');
+    if (!drawerFooter) {
+      drawerFooter = document.createElement('div');
+      drawerFooter.className = 'nav__drawer-footer';
+      drawerFooter.innerHTML = '<div class="nav__drawer-actions">' +
+        '<a class="btn btn--primary btn--block nav__drawer-cta" href="contact-us.html">' +
+          '<span>Free Consultation</span>' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>' +
+        '</a>' +
+        '<div class="nav__drawer-quick-contact">' +
+          '<a href="tel:+919773916555" class="nav__quick-btn nav__quick-btn--call" aria-label="Call Diverse Pathwais">' +
+            '<span class="nav__quick-badge">' +
+              '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>' +
+            '</span>' +
+            '<span class="nav__quick-text">' +
+              '<span class="nav__quick-label">Call Us</span>' +
+            '</span>' +
+          '</a>' +
+          '<a href="https://wa.me/919319090505" target="_blank" rel="noopener" class="nav__quick-btn nav__quick-btn--wa" aria-label="Chat on WhatsApp">' +
+            '<span class="nav__quick-badge">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.004 2c-5.517 0-9.993 4.476-9.993 9.993 0 1.76.459 3.477 1.332 4.99L2 22l5.176-1.328c1.464.799 3.111 1.221 4.828 1.221 5.518 0 9.996-4.477 9.996-9.994C22 6.476 17.522 2 12.004 2zm5.836 14.195c-.244.685-1.417 1.31-1.954 1.394-.518.08-1.18.114-3.52-0.854-2.883-1.19-4.733-4.116-4.877-4.307-.14-.191-1.168-1.554-1.168-2.963 0-1.408.738-2.102 1.002-2.389.263-.287.574-.358.766-.358.192 0 .383.002.55.011.178.01.414-.067.647.492.244.586.828 2.023.9 2.167.072.144.12.311.024.502-.096.192-.144.311-.287.479l-.431.503c-.144.143-.294.298-.126.586.168.287.747 1.233 1.602 1.994 1.101.98 2.029 1.284 2.316 1.427.287.143.455.12.623-.072.168-.192.718-.838.91-1.125.191-.287.383-.239.646-.143.264.095 1.674.789 1.961.933.287.144.479.215.55.335.072.12.072.694-.172 1.379z"/></svg>' +
+            '</span>' +
+            '<span class="nav__quick-text">' +
+              '<span class="nav__quick-label">WhatsApp</span>' +
+            '</span>' +
+          '</a>' +
+        '</div>' +
+        '<div class="nav__drawer-helpline">' +
+          '<span>Helpline:</span> <a href="tel:+919773916555">+91 97739 16555</a>' +
+        '</div>' +
+      '</div>';
+      nav.appendChild(drawerFooter);
+    }
+
+    /* Assign animation delay indices to items */
+    Array.prototype.slice.call(nav.querySelectorAll('.nav__item')).forEach(function (it, idx) {
+      it.style.setProperty('--nav-i', idx);
+    });
+
+    var parents = Array.prototype.slice.call(nav.querySelectorAll('.nav__item--has-sub'));
+
+    function closeSubs() {
+      parents.forEach(function (p) {
+        p.classList.remove('is-open');
+        var t = p.querySelector('.nav__link');
+        if (t) t.setAttribute('aria-expanded', 'false');
+      });
+    }
+
+    function openNav() {
+      nav.classList.add('is-open');
+      toggle.classList.add('is-open');
+      toggle.setAttribute('aria-expanded', 'true');
+      body.classList.add('nav-open');
+      lockScroll();
+    }
+
     function closeNav() {
       nav.classList.remove('is-open');
       toggle.classList.remove('is-open');
       toggle.setAttribute('aria-expanded', 'false');
-      document.body.style.overflow = '';
+      body.classList.remove('nav-open');
+      unlockScroll();
+      closeSubs();
     }
 
-    toggle.addEventListener('click', function () {
-      var open = nav.classList.toggle('is-open');
-      toggle.classList.toggle('is-open', open);
-      toggle.setAttribute('aria-expanded', String(open));
-      document.body.style.overflow = open ? 'hidden' : '';
+    toggle.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (nav.classList.contains('is-open')) closeNav();
+      else openNav();
     });
 
-    /* Dropdowns: hover on desktop, click on touch/mobile. */
-    var parents = Array.prototype.slice.call(nav.querySelectorAll('.nav__item--has-sub'));
+    scrim.addEventListener('click', closeNav);
 
+    /* Tapping a destination should feel instant: drop the drawer and release
+       the scroll lock before the browser starts navigating.
+       If it's the current page, prevent default and smoothly close without reloading. */
+    nav.addEventListener('click', function (e) {
+      var link = e.target.closest ? e.target.closest('a[href]') : null;
+      if (!link || !nav.contains(link)) return;
+      var rawHref = link.getAttribute('href');
+      if (rawHref && rawHref.charAt(0) !== '#') {
+        try {
+          var targetUrl = new URL(link.href, window.location.href);
+          var normTarget = (targetUrl.pathname || '').replace(/\/index\.html$/, '/').replace(/\/$/, '');
+          var normCurrent = (window.location.pathname || '').replace(/\/index\.html$/, '/').replace(/\/$/, '');
+          if (normTarget === normCurrent && targetUrl.search === window.location.search) {
+            e.preventDefault();
+            closeNav();
+            return;
+          }
+        } catch (ignore) {}
+      }
+      closeNav();
+    });
+
+    /* Dropdowns: tap to expand on touch, hover on pointer devices. */
     parents.forEach(function (item) {
       var trigger = item.querySelector('.nav__link');
+      if (!trigger) return;
 
       trigger.addEventListener('click', function (e) {
-        if (!mq.matches) return; // desktop uses hover
+        if (!mq.matches) return; /* desktop uses hover */
         e.preventDefault();
+        e.stopPropagation();
         var wasOpen = item.classList.contains('is-open');
-        parents.forEach(function (p) { p.classList.remove('is-open'); });
-        item.classList.toggle('is-open', !wasOpen);
-        trigger.setAttribute('aria-expanded', String(!wasOpen));
+        closeSubs();
+        if (!wasOpen) {
+          item.classList.add('is-open');
+          trigger.setAttribute('aria-expanded', 'true');
+        }
       });
 
       item.addEventListener('mouseenter', function () {
@@ -392,25 +557,25 @@
 
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
-      parents.forEach(function (p) {
-        p.classList.remove('is-open');
-        p.querySelector('.nav__link').setAttribute('aria-expanded', 'false');
-      });
-      closeNav();
+      closeSubs();
+      if (nav.classList.contains('is-open')) {
+        closeNav();
+        toggle.focus();
+      }
     });
 
     document.addEventListener('click', function (e) {
       if (nav.contains(e.target) || toggle.contains(e.target)) return;
-      parents.forEach(function (p) { p.classList.remove('is-open'); });
-      if (mq.matches) closeNav();
+      if (!mq.matches) closeSubs();
     });
 
-    var onChange = function () {
-      closeNav();
-      parents.forEach(function (p) { p.classList.remove('is-open'); });
-    };
+    /* Crossing the breakpoint (rotation, desktop resize) must never leave the
+       page scroll-locked or the drawer half-applied. */
+    var onChange = function () { closeNav(); };
     if (mq.addEventListener) mq.addEventListener('change', onChange);
     else if (mq.addListener) mq.addListener(onChange);
+
+    window.addEventListener('pageshow', function (e) { if (e.persisted) closeNav(); });
   }
 
   /* --------------------------------------------------- scroll reveals --- */

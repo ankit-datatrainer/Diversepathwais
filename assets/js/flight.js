@@ -12,6 +12,10 @@ import * as THREE from 'three';
 
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const mobileMQ = window.matchMedia('(max-width: 900px)');
+/* Phones pay the most for this scene and see the least of it, so the
+   background fleet and the contrails are dropped there and the buffer is
+   kept at 1x. The hero jet itself still flies. */
+const phoneMQ = window.matchMedia('(max-width: 767px)');
 const YAW_R = -0.42;           /* nose to the right, three-quarter view   */
 const YAW_L = -2.72;           /* nose to the left, three-quarter view    */
 const FOV = 34;
@@ -266,7 +270,7 @@ class Trail {
    vertical lane so it never crosses copy. */
 function homeKeys() {
   return [
-    { trig: '#hero', at: 0, view: 0, el: '#hero', fx: .85, fy: .33, s: .7, yaw: YAW_R, pitch: .04, roll: -.12, o: 1, m: { fx: .72, fy: .15, s: .42 } },
+    { trig: '#hero', at: 0, view: 0, el: '#hero', fx: .85, fy: .33, s: .7, yaw: YAW_R, pitch: .04, roll: -.12, o: 1, m: { fx: .82, fy: .06, s: .30 } },
     { trig: '#hero', at: .55, view: 0, el: '#hero', fx: .84, fy: .96, s: .55, yaw: -.6, pitch: -.45, roll: -.3, o: 1, m: { fx: .8, fy: .96, s: .34 } },
     { trig: '#destinations', at: 0, view: .55, el: '#destinations', fx: .9, py: 44, s: .32, yaw: YAW_R, pitch: 0, roll: -.08, o: 1, m: { fx: .84, py: 30, s: .24 } },
     { trig: '.hgal__track', at: 0, view: 0, el: null, fx: .66, fy: .13, s: .3, yaw: YAW_R, pitch: .05, roll: -.1, o: 1, m: { fx: .84, py: 34, s: .24 } },
@@ -282,7 +286,7 @@ function homeKeys() {
 }
 function innerKeys() {
   return [
-    { trig: '.page-hero', at: 0, view: 0, el: '.page-hero', fx: .8, fy: .42, s: .72, yaw: YAW_R, pitch: .05, roll: -.12, o: 1, m: { fx: .78, fy: .2, s: .38 } },
+    { trig: '.page-hero', at: 0, view: 0, el: '.page-hero', fx: .8, fy: .42, s: .72, yaw: YAW_R, pitch: .05, roll: -.12, o: 1, m: { fx: .82, fy: .10, s: .30 } },
     { trig: '.page-hero', at: 1, view: .15, el: '.page-hero', fx: 1.2, fy: -.3, s: .4, yaw: YAW_R, pitch: .55, roll: -.3, o: 0, m: { fx: 1.2, fy: -.3, s: .25 } }
   ];
 }
@@ -294,7 +298,7 @@ function init() {
   if (!keysDef) { ready(); return; }
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobileMQ.matches ? 1.6 : 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, phoneMQ.matches ? 1 : mobileMQ.matches ? 1.5 : 2));
   renderer.setClearColor(0x000000, 0);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.02;
@@ -332,7 +336,7 @@ function init() {
   /* hero fleet (home only) */
   const fleet = [];
   const heroEl = document.querySelector('#hero');
-  if (heroEl) {
+  if (heroEl && !phoneMQ.matches) {
     const fleetMats = makeMaterials();
     const proto = buildPlane(fleetMats);
     [
@@ -424,6 +428,11 @@ function init() {
   const tmp = new THREE.Vector3();
   function frame(now) {
     if (!running) return;
+    if (document.body.classList.contains('nav-open')) {
+      last = now;
+      requestAnimationFrame(frame);
+      return;
+    }
     const dt = Math.min((now - last) / 1000, .05); last = now;
     const time = (now - t0) / 1000;
     const sy = window.scrollY;
@@ -461,7 +470,7 @@ function init() {
 
     /* contrail emitted from the tail */
     let busy = false;
-    if (hero.visible && revealed) {
+    if (hero.visible && revealed && !phoneMQ.matches) {
       tmp.set(-2.3, .2, 0).applyEuler(hero.rotation).multiplyScalar(st.s).add(hero.position);
       tmp.y += scrollWorld;
       const moved = lastY == null ? 0 : Math.abs(tmp.y - lastY);
