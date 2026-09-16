@@ -1920,7 +1920,7 @@ body.nav-locked {
 .contact-card__office p { font-size: .88rem; line-height: 1.55; color: var(--body); }
 
 .contact-card__social {
-  display: flex; align-items: center; gap: .75rem; margin-top: auto; padding-top: .4rem; flex-wrap: wrap;
+  display: flex; align-items: center; gap: .75rem; margin-top: 0; padding-top: 0; flex-wrap: wrap;
 }
 .contact-card__social-btn {
   display: inline-flex; align-items: center; justify-content: center;
