@@ -1,0 +1,29 @@
+@extends('layouts.site')
+
+@section('content')
+<section class="page-hero" style="background-image: url('{{ asset('assets/img/banners/banner-about.jpg') }}');">
+<div class="shell">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="{{ url('/') }}">Home</a><span>/</span>Privacy Policy</nav>
+<div class="page-hero__content">
+<span class="page-hero__eyebrow" data-anim="up">DATA SECURITY & TRUST</span>
+<h1 class="page-hero__title" data-anim="up">PRIVACY POLICY</h1>
+<p class="page-hero__lead" data-anim="up" style="--d:110ms">How we protect, store, and safeguard your sensitive immigration credentials and personal data.</p>
+</div>
+</div>
+</section><section class="section">
+<div class="shell">
+<div class="layout">
+<div class="prose" data-anim="up"><p>At Diverse Pathwais PVT LTD., we respect and protect your privacy. We operate under a strict data protection policy to safeguard your personal information at every level. This ensures complete confidentiality and helps us provide secure and reliable services. By using our website or any of our services, you agree to the terms outlined in this Privacy Policy, including future updates.</p><h2>1) How We Collect, Store, and Protect Your Data</h2><p>Diverse Pathwais PVT LTD. collects two types of information from applicants:</p><ul><li><strong>Voluntary Information:</strong> Details you provide through registration forms, sign-ups, emails, or assessments.</li><li><strong>Automated Information:</strong> Data collected through tracking technologies such as IP address, browser type, and website usage patterns.</li></ul><p>We may also collect personally identifiable information when you use certain features of our website, such as:</p><ul><li>Making payments</li><li>Subscribing to newsletters</li><li>Filling out assessment forms</li><li>Commenting on blogs or resources</li></ul><p>Our immigration consultants may gather essential credentials to evaluate your eligibility under various visa programs. Please note, we do not collect card details during profile assessments. Assessment results are delivered to your registered email within 24 hours, followed by relevant updates about your inquiry.</p><p>When you decide to proceed with a visa application, a formal registration and payment may be required. At this stage, you may provide card details directly for processing. Diverse Pathwais PVT LTD. does not store or share card details with any third parties.</p><h2>2) How We Use Your Information</h2><p>The information you provide is used only for the following purposes:</p><ul><li>To assess and determine your eligibility for visa programs</li><li>To contact you based on your provided details</li><li>To improve our services and website performance</li></ul><p>Your personal information is never sold, disclosed, or transferred to unaffiliated third parties, except to trusted associates who require it to provide services, or when required by law.</p><p>We may share non-personal and anonymous data (such as IP addresses, web pages visited, and browsing behavior) with third parties for analytical and service improvement purposes.</p><p>In rare cases, we may disclose your information if necessary to:</p><ul><li>Enforce our terms and conditions</li><li>Protect the rights, property, or safety of Diverse Pathwais PVT LTD., our clients, or others</li><li>Comply with legal requirements</li></ul><h2>3) How We Protect Your Information</h2><p>We take all reasonable measures to secure your data from unauthorized access, misuse, or alteration. Our systems use physical, electronic, and managerial safeguards to maintain data accuracy and security.</p><p>While no system can guarantee absolute security, Diverse Pathwais PVT LTD. ensures that industry-standard practices are in place to reduce risks to an acceptable level.</p><h3>Disclaimer on Security</h3><p>By using our website and services, you acknowledge that no online data transmission is completely secure. You share information with us at your own risk, though we take strong precautions to protect it.</p><h3>Notification of Changes</h3><p>Diverse Pathwais PVT LTD. reserves the right to update this Privacy Policy at any time. Any changes will apply to information collected after the revised policy takes effect. Your continued use of our website signifies acceptance of these terms.</p><h3>Contact Information</h3><p>For any questions, clarifications, or concerns about this Privacy Policy, please contact us:</p><ul><li>&#128231; <a href="mailto:diversepathwise@gmail.com">diversepathwise@gmail.com</a></li><li>&#128222; <a href="tel:9773916555">9773916555</a> / <a href="tel:9319090505">9319090505</a></li></ul></div>
+<aside class="sidebar" data-anim-group="90">
+<div class="side-card" data-anim="left"><h3>Visa Categories</h3><ul><li><a href="{{ url('skilled-worker-visa') }}">Skilled Worker Visa</a></li><li><a href="{{ url('student-visa') }}">Student / Study Visa</a></li><li><a href="{{ url('family-visa') }}">Family Visa</a></li><li><a href="{{ url('visitor-visa') }}">Visitor Visa</a></li><li><a href="{{ url('work-permit') }}">Work Permit</a></li></ul></div>
+<div class="side-card" data-anim="left"><h3>Our Services</h3><ul><li><a href="{{ url('consultation') }}">Consultation</a></li><li><a href="{{ url('eligibility-assessment') }}">Eligibility Assessment</a></li><li><a href="{{ url('application-processing') }}">Application Processing</a></li></ul></div>
+<div class="side-card side-card--cta" data-anim="left">
+<h3>Planning to Move Abroad?</h3>
+<p>Talk to a licensed consultant and find out which pathway fits your profile.</p>
+<a class="btn btn--gold btn--block" href="{{ url('contact-us') }}">Contact Us <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7"/></svg></a>
+</div>
+</aside>
+</div>
+</div>
+</section>
+@endsection
