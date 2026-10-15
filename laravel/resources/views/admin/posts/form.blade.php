@@ -19,7 +19,7 @@
     $suffix = \App\Models\Setting::get('blog_title_suffix');
     $publishedValue = old('published_at', $post->published_at?->format('Y-m-d\TH:i'));
 @endphp
-<form method="post" action="{{ $post->exists ? route('admin.posts.update', $post) : route('admin.posts.store') }}" enctype="multipart/form-data">
+<form method="post" action="{{ $post->exists ? route('admin.posts.update', $post) : route('admin.posts.store') }}" enctype="multipart/form-data" data-track>
 @csrf
 @if ($post->exists) @method('PUT') @endif
 <div class="grid grid--main">
@@ -68,9 +68,10 @@
     'schemaHint' => 'Optional. BlogPosting and BreadcrumbList schema are generated automatically — only paste JSON here to override them (e.g. FAQPage or HowTo).',
 ])
 </div>
-<div class="form-actions">
+<div class="savebar">
 <button class="btn btn--primary" type="submit">{{ $post->exists ? 'Save changes' : 'Create post' }}</button>
 <a class="btn btn--ghost" href="{{ route('admin.posts.index') }}">Cancel</a>
+<span class="dirty"><i></i>Unsaved changes · <kbd>Ctrl S</kbd></span><span class="muted">{{ $post->exists ? 'Saved '.$post->updated_at->diffForHumans() : 'Not saved yet' }}</span>
 </div>
 </div>
 

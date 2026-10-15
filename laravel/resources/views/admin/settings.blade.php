@@ -3,7 +3,7 @@
 @section('crumb', 'Super Admin / Settings')
 
 @section('content')
-<form method="post" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" class="grid">
+<form method="post" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" class="grid" data-track>
 @csrf
 @method('PUT')
 <div class="grid grid--2">
@@ -81,6 +81,6 @@
 </div></div>
 </div>
 </div>
-<div class="form-actions"><button class="btn btn--primary" type="submit">Save settings</button></div>
+<div class="savebar"><button class="btn btn--primary" type="submit">Save settings</button><span class="dirty"><i></i>Unsaved changes · <kbd>Ctrl S</kbd></span><span class="muted">Applies to every page instantly</span></div>
 </form>
 @endsection

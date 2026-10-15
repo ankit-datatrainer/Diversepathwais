@@ -7,7 +7,7 @@
 @section('content')
 <div class="grid grid--main">
 <div class="card">
-<div class="card__head"><div><h2>{{ $enquiry->formLabel() }}</h2><p>Received {{ $enquiry->created_at->format('l, F j, Y \a\t g:i A') }} ({{ $enquiry->created_at->diffForHumans() }})</p></div></div>
+<div class="card__head"><div class="person"><span class="avatar">{{ strtoupper(substr($enquiry->name, 0, 1)) }}</span><div><h2>{{ $enquiry->name }} <span class="badge" style="vertical-align:middle;margin-left:4px">{{ $enquiry->formLabel() }}</span></h2><p>Received {{ $enquiry->created_at->format('l, F j, Y \a\t g:i A') }} ({{ $enquiry->created_at->diffForHumans() }})</p></div></div></div>
 <div class="card__body" style="display:grid;gap:20px">
 <dl class="kv">
 <dt>Name</dt><dd>{{ $enquiry->name }}</dd>

@@ -3,7 +3,7 @@
 @section('crumb', 'Super Admin / Account')
 
 @section('content')
-<form method="post" action="{{ route('admin.account.update') }}" class="grid grid--2">
+<form method="post" action="{{ route('admin.account.update') }}" class="grid grid--2" data-track>
 @csrf
 @method('PUT')
 <div class="card">
@@ -23,6 +23,6 @@
 <div class="field field--full"><span class="hint">At least 8 characters with letters and numbers.</span></div>
 </div></div>
 </div>
-<div class="form-actions"><button class="btn btn--primary" type="submit">Save account</button></div>
+<div class="savebar" style="grid-column:1/-1"><button class="btn btn--primary" type="submit">Save account</button><span class="dirty"><i></i>Unsaved changes · <kbd>Ctrl S</kbd></span><span class="muted">Password changes take effect on next login</span></div>
 </form>
 @endsection

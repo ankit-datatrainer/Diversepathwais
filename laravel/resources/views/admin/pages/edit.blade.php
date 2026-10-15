@@ -12,7 +12,7 @@
     $site = \App\Models\Setting::get('site_name');
     $fallbackTitle = $page->name.' | '.$site;
 @endphp
-<form method="post" action="{{ route('admin.pages.update', $page) }}" enctype="multipart/form-data">
+<form method="post" action="{{ route('admin.pages.update', $page) }}" enctype="multipart/form-data" data-track>
 @csrf
 @method('PUT')
 <div class="grid grid--main">
@@ -28,10 +28,10 @@
 @endphp
 @include('admin.partials.seo-fields', ['model' => $page, 'fallbackTitle' => $fallbackTitle, 'extraAdvanced' => $extraAdvanced])
 </div>
-<div class="form-actions">
+<div class="savebar">
 <button class="btn btn--primary" type="submit">Save page SEO</button>
 <a class="btn btn--ghost" href="{{ route('admin.pages.index') }}">Back to pages</a>
-<span class="muted" style="margin-left:auto;font-size:12.5px">Last updated {{ $page->updated_at?->diffForHumans() }}</span>
+<span class="dirty"><i></i>Unsaved changes · <kbd>Ctrl S</kbd></span><span class="muted">Last updated {{ $page->updated_at?->diffForHumans() }}</span>
 </div>
 </div>
 <div class="grid sticky">
