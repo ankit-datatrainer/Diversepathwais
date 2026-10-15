@@ -1,0 +1,119 @@
+/* =====================================================================
+   Blog + Laravel additions. Uses the design tokens from style.css.
+   Loaded before responsive.css, which must stay the last stylesheet.
+   ===================================================================== */
+
+/* Homepage "Group Media" cards are now real articles — make the whole card a link */
+.media-card__link { position: absolute; inset: 0; z-index: 3; border-radius: inherit; }
+.media-card__link:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.media-more { display: flex; justify-content: center; margin-top: 2.75rem; }
+
+/* ------------------------------------------------------------ filters */
+.blog-filters { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; margin: 0 auto 3rem; }
+.blog-chip {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .55rem 1.15rem; border-radius: 999px;
+  border: 1px solid var(--line); background: #fff; color: var(--heading);
+  font-size: var(--fs-sm); font-weight: 600; letter-spacing: .01em;
+  transition: background .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease), transform .25s var(--ease);
+}
+.blog-chip:hover { border-color: var(--navy); color: var(--navy); transform: translateY(-2px); }
+.blog-chip.is-active { background: var(--navy); border-color: var(--navy); color: #fff; }
+.blog-chip small { opacity: .65; font-weight: 500; }
+
+/* ------------------------------------------------------------- cards */
+.blog-grid { display: grid; gap: 2rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.blog-card {
+  position: relative; display: flex; flex-direction: column;
+  background: #fff; border: 1px solid var(--line-soft); border-radius: var(--radius-lg);
+  overflow: hidden; box-shadow: 0 8px 24px rgba(6, 23, 43, .06);
+  transition: transform .45s var(--ease), box-shadow .45s var(--ease);
+}
+.blog-card:hover { transform: translateY(-6px); box-shadow: 0 18px 40px rgba(6, 23, 43, .12); }
+.blog-card__media { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--navy-50); }
+.blog-card__media img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s var(--ease); }
+.blog-card:hover .blog-card__media img { transform: scale(1.07); }
+.blog-card__cat {
+  position: absolute; left: 1rem; top: 1rem; z-index: 2;
+  padding: .35rem .8rem; border-radius: 999px;
+  background: var(--gold); color: var(--navy-900);
+  font-size: var(--fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.blog-card__body { display: flex; flex-direction: column; gap: .8rem; padding: 1.6rem 1.6rem 1.75rem; flex: 1; }
+.blog-card__meta { display: flex; flex-wrap: wrap; gap: .35rem .9rem; color: var(--muted); font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; font-weight: 600; }
+.blog-card__title { font-size: 1.2rem; line-height: 1.4; color: var(--heading); }
+.blog-card__title a { color: inherit; }
+.blog-card__title a::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.blog-card__excerpt { color: var(--muted); font-size: var(--fs-body); line-height: 1.7; margin: 0; }
+.blog-card__more { margin-top: auto; display: inline-flex; align-items: center; gap: .45rem; color: var(--navy); font-weight: 700; font-size: var(--fs-sm); }
+.blog-card__more svg { transition: transform .3s var(--ease); }
+.blog-card:hover .blog-card__more svg { transform: translateX(4px); }
+
+.blog-empty { text-align: center; padding: 4rem 1rem; color: var(--muted); }
+.blog-empty h2 { font-size: 1.75rem; margin-bottom: .75rem; }
+
+/* -------------------------------------------------------- pagination */
+.blog-pager { display: flex; justify-content: center; gap: .5rem; margin-top: 3.5rem; flex-wrap: wrap; }
+.blog-pager a, .blog-pager span {
+  min-width: 44px; height: 44px; padding: 0 .9rem; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--heading); font-weight: 600; font-size: var(--fs-sm);
+}
+.blog-pager a:hover { border-color: var(--navy); color: var(--navy); }
+.blog-pager .is-current { background: var(--navy); border-color: var(--navy); color: #fff; }
+.blog-pager .is-disabled { opacity: .4; }
+
+/* ------------------------------------------------------------ article */
+.page-hero__meta { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: 1.4rem; color: rgba(255, 255, 255, .82); font-size: var(--fs-sm); letter-spacing: .04em; }
+.page-hero__meta span { display: inline-flex; align-items: center; gap: .45rem; }
+.article-cover { border-radius: var(--radius-lg); overflow: hidden; margin: 0 0 2.5rem; box-shadow: var(--shadow-md); }
+.article-cover img { width: 100%; height: auto; display: block; }
+.prose img { max-width: 100%; height: auto; border-radius: var(--radius); margin: 1rem 0 1.75rem; }
+.prose blockquote {
+  margin: 2rem 0; padding: 1.4rem 1.6rem; border-left: 4px solid var(--gold);
+  background: var(--navy-50); border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--heading); font-size: 1.1rem; line-height: 1.75; font-style: italic;
+}
+.prose blockquote p:last-child { margin-bottom: 0; }
+.prose h4 { font-size: 1.1rem; margin: 1.75rem 0 .75rem; }
+.prose pre { background: var(--navy-900); color: #fff; padding: 1.2rem; border-radius: var(--radius); overflow-x: auto; margin-bottom: 1.5rem; }
+.prose table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: var(--fs-body); }
+.prose th, .prose td { border: 1px solid var(--line); padding: .7rem .9rem; text-align: left; }
+.prose th { background: var(--navy-50); color: var(--heading); }
+.article-tags { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--line); }
+.article-tags span { padding: .4rem .85rem; border-radius: 999px; background: var(--navy-50); color: var(--navy); font-size: var(--fs-xs); font-weight: 600; }
+.article-share { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; margin-top: 1.5rem; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.article-share a {
+  width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); color: var(--navy); transition: background .25s var(--ease), color .25s var(--ease);
+}
+.article-share a:hover { background: var(--navy); color: #fff; }
+.side-card ul.side-posts { list-style: none; display: grid; gap: .35rem; }
+/* outranks .side-card ul a (flex row + arrow) from style.css */
+.side-card ul.side-posts a { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: .85rem; align-items: center; padding: .5rem; color: var(--heading); }
+.side-card ul.side-posts a::after { content: none; }
+.side-posts img { width: 64px; height: 64px; object-fit: cover; border-radius: 14px; flex: none; }
+.side-posts strong { display: block; font-size: var(--fs-sm); line-height: 1.45; font-weight: 600; transition: color .25s var(--ease); }
+.side-posts small { color: var(--muted); font-size: var(--fs-xs); }
+.side-posts a:hover strong { color: var(--navy); }
+.related-head { margin-bottom: 2.5rem; }
+
+/* ----------------------------------------------- form submit feedback */
+.form-status.is-error { background: #fdecec; color: #9b1c1c; border: 1px solid #f5c2c2; }
+[data-enquiry-form] button[disabled] { opacity: .7; cursor: progress; }
+
+/* Shown only to a logged-in super admin */
+.admin-seo-pill {
+  position: fixed; left: 18px; bottom: 18px; z-index: 9999;
+  padding: .6rem 1rem; border-radius: 999px; background: var(--navy-900); color: #fff;
+  font: 600 13px/1 system-ui, sans-serif; box-shadow: var(--shadow-lg); border: 1px solid rgba(255,255,255,.15);
+}
+.admin-seo-pill:hover { background: var(--gold); color: var(--navy-900); }
+
+@media (max-width: 1024px) {
+  .blog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+}
+@media (max-width: 640px) {
+  .blog-grid { grid-template-columns: 1fr; }
+  .blog-card__body { padding: 1.35rem 1.25rem 1.5rem; }
+  .media-more { margin-top: 2rem; }
+}
